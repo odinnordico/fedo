@@ -8,6 +8,13 @@ import (
 func main() {
 	logger.Info("Starting Dog Food Calculator")
 
+	// Create a new fyne application with a unique ID
+	myApp := app.NewWithID("com.github.odinnordico.fedo")
+	icon, err := fyne.LoadResourceFromPath("fedo.png")
+	if err == nil {
+		myApp.SetIcon(icon)
+	}
+
 	// Load the feeding data from JSON file
 	feedingData, err := loadFeedingData("feeding_data.json")
 	if err != nil {
@@ -19,13 +26,6 @@ func main() {
 	coeffsMutex.Lock()
 	globalCoeffs = trainModel(feedingData)
 	coeffsMutex.Unlock()
-
-	// Create a new fyne application with a unique ID
-	myApp := app.NewWithID("com.github.odinnordico.fedo")
-	icon, err := fyne.LoadResourceFromPath("fedo.png")
-	if err == nil {
-		myApp.SetIcon(icon)
-	}
 
 	myWindow := createMainWindow(myApp, feedingData)
 	myWindow.ShowAndRun()

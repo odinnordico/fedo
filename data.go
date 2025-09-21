@@ -2,20 +2,76 @@ package main
 
 import (
 	"encoding/json"
-	"os"
+	"io"
 
+	"fyne.io/fyne/v2"
+	"fyne.io/fyne/v2/storage"
 	"gonum.org/v1/gonum/mat"
 )
 
 func loadFeedingData(filename string) ([]Portion, error) {
+	app := fyne.CurrentApp()
+	rootURI := app.Storage().RootURI()
+	fileURI, err := storage.ParseURI(rootURI.String() + "/" + filename)
+	initialData := []Portion{
+		{
+			WeightKG: 1,
+			DailyGr:  30,
+		},
+		{
+			WeightKG: 2.25,
+			DailyGr:  50,
+		},
+		{
+			WeightKG: 4.5,
+			DailyGr:  100,
+		},
+		{
+			WeightKG: 9,
+			DailyGr:  150,
+		},
+		{
+			WeightKG: 13.5,
+			DailyGr:  200,
+		},
+		{
+			WeightKG: 18,
+			DailyGr:  233,
+		},
+		{
+			WeightKG: 27,
+			DailyGr:  325,
+		},
+		{
+			WeightKG: 36,
+			DailyGr:  375,
+		},
+		{
+			WeightKG: 45,
+			DailyGr:  450,
+		},
+		{
+			WeightKG: 57,
+			DailyGr:  525,
+		},
+		{
+			WeightKG: 68,
+			DailyGr:  600,
+		},
+		{
+			WeightKG: 79,
+			DailyGr:  666,
+		},
+	}
+	if err != nil {
+		logger.Error("Failed to parse URI", "error", err)
+		return initialData, err
+	}
+
 	// Check if file exists
-	if _, err := os.Stat(filename); os.IsNotExist(err) {
+	exists, err := storage.Exists(fileURI)
+	if err != nil || !exists {
 		// File does not exist, create with initial data
-		initialData := []Portion{
-			{WeightKG: 1, DailyGr: 30},
-			{WeightKG: 5, DailyGr: 100},
-			{WeightKG: 10, DailyGr: 150},
-		}
 		err := saveFeedingData(filename, initialData)
 		if err != nil {
 			logger.Error("Failed to create initial feeding data file", "error", err)
@@ -25,9 +81,15 @@ func loadFeedingData(filename string) ([]Portion, error) {
 		return initialData, nil
 	}
 
-	data, err := os.ReadFile(filename)
+	reader, err := storage.Reader(fileURI)
 	if err != nil {
 		logger.Error("Failed to read feeding data file", "error", err)
+		return nil, err
+	}
+	defer reader.Close()
+	data, err := io.ReadAll(reader)
+	if err != nil {
+		logger.Error("Failed to read feeding data", "error", err)
 		return nil, err
 	}
 	var feedingData []Portion
@@ -46,9 +108,22 @@ func saveFeedingData(filename string, feedingData []Portion) error {
 		logger.Error("Failed to marshal feeding data", "error", err)
 		return err
 	}
-	err = os.WriteFile(filename, data, 0644)
+	app := fyne.CurrentApp()
+	rootURI := app.Storage().RootURI()
+	fileURI, err := storage.ParseURI(rootURI.String() + "/" + filename)
+	if err != nil {
+		logger.Error("Failed to parse URI", "error", err)
+		return err
+	}
+	writer, err := storage.Writer(fileURI)
 	if err != nil {
 		logger.Error("Failed to write feeding data file", "error", err)
+		return err
+	}
+	defer writer.Close()
+	_, err = writer.Write(data)
+	if err != nil {
+		logger.Error("Failed to write feeding data", "error", err)
 		return err
 	}
 	logger.Info("Saved feeding data", "count", len(feedingData))
