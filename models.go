@@ -4,6 +4,8 @@ import (
 	"log/slog"
 	"os"
 	"sync"
+
+	"fyne.io/fyne/v2"
 )
 
 // Portion represents a data point from the feeding guide table.
@@ -12,14 +14,16 @@ type Portion struct {
 	DailyGr  float64 `json:"daily_gr"`
 }
 
-// A mutex to ensure thread-safe access to the feedingData slice.
-var dataMutex sync.RWMutex
-
-// Mutex for global coefficients
-var coeffsMutex sync.RWMutex
-
-// Global coefficients for the polynomial model
-var globalCoeffs []float64
+// App holds the application state.
+type App struct {
+	FeedingData        []Portion
+	Coeffs             []float64
+	DataMutex          sync.RWMutex
+	CoeffsMutex        sync.RWMutex
+	EditWindowOpen     bool
+	LoadJSONWindowOpen bool
+	CurrentLoadWindow  fyne.Window
+}
 
 // Logger
 var logger = slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))

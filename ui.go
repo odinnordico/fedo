@@ -11,15 +11,14 @@ import (
 	"fyne.io/fyne/v2/widget"
 )
 
-var editWindowOpen bool
-var loadJSONWindowOpen bool
-var currentLoadWindow fyne.Window
+// Window state variables are now in App struct
 
-func showEditWindow(myApp fyne.App, feedingData *[]Portion) {
-	if editWindowOpen {
+// showEditWindow displays a window for editing the feeding data points.
+func showEditWindow(myApp fyne.App, app *App) {
+	if app.EditWindowOpen {
 		return
 	}
-	editWindowOpen = true
+	app.EditWindowOpen = true
 	editWindow := myApp.NewWindow("Edit Feeding Data")
 	editWindow.Resize(fyne.NewSize(800, 600))
 
@@ -30,10 +29,10 @@ func showEditWindow(myApp fyne.App, feedingData *[]Portion) {
 
 	buildGrid = func() *container.Scroll {
 		gridContainer := container.NewVBox()
-		weightEntries = make([]*widget.Entry, len(*feedingData))
-		dailyEntries = make([]*widget.Entry, len(*feedingData))
+		weightEntries = make([]*widget.Entry, len(app.FeedingData))
+		dailyEntries = make([]*widget.Entry, len(app.FeedingData))
 
-		for i, p := range *feedingData {
+		for i, p := range app.FeedingData {
 			localIndex := i
 
 			weightEntry := widget.NewEntry()
@@ -45,18 +44,18 @@ func showEditWindow(myApp fyne.App, feedingData *[]Portion) {
 			dailyEntries[localIndex] = dailyEntry
 
 			deleteButton := widget.NewButton("Delete", func() {
-				if len(*feedingData) > 3 {
+				if len(app.FeedingData) > 3 {
 					// Update feedingData with current entries
-					for i := range *feedingData {
+					for i := range app.FeedingData {
 						if w, err := strconv.ParseFloat(weightEntries[i].Text, 64); err == nil {
-							(*feedingData)[i].WeightKG = w
+							app.FeedingData[i].WeightKG = w
 						}
 						if d, err := strconv.ParseFloat(dailyEntries[i].Text, 64); err == nil {
-							(*feedingData)[i].DailyGr = d
+							app.FeedingData[i].DailyGr = d
 						}
 					}
 					// Remove the item
-					*feedingData = append((*feedingData)[:localIndex], (*feedingData)[localIndex+1:]...)
+					app.FeedingData = append(app.FeedingData[:localIndex], app.FeedingData[localIndex+1:]...)
 					// Rebuild the grid
 					content.Objects[1] = buildGrid()
 					content.Refresh()
@@ -86,21 +85,21 @@ func showEditWindow(myApp fyne.App, feedingData *[]Portion) {
 
 	addButton := widget.NewButton("Add Row", func() {
 		// Update feedingData with current entries
-		for i := range *feedingData {
+		for i := range app.FeedingData {
 			if w, err := strconv.ParseFloat(weightEntries[i].Text, 64); err == nil {
-				(*feedingData)[i].WeightKG = w
+				app.FeedingData[i].WeightKG = w
 			}
 			if d, err := strconv.ParseFloat(dailyEntries[i].Text, 64); err == nil {
-				(*feedingData)[i].DailyGr = d
+				app.FeedingData[i].DailyGr = d
 			}
 		}
-		*feedingData = append(*feedingData, Portion{WeightKG: 0, DailyGr: 0})
+		app.FeedingData = append(app.FeedingData, Portion{WeightKG: 0, DailyGr: 0})
 		content.Objects[1] = buildGrid()
 		content.Refresh()
 	})
 
 	loadJSONButton := widget.NewButton("Load JSON", func() {
-		showLoadJSONWindow(myApp, feedingData, func() {
+		showLoadJSONWindow(myApp, app, func() {
 			content.Objects[1] = buildGrid()
 			content.Refresh()
 		})
@@ -110,7 +109,7 @@ func showEditWindow(myApp fyne.App, feedingData *[]Portion) {
 		var newFeedingData []Portion
 		hasError := false
 
-		for i := range *feedingData {
+		for i := range app.FeedingData {
 			weight, err := strconv.ParseFloat(weightEntries[i].Text, 64)
 			if err != nil {
 				widget.NewModalPopUp(widget.NewLabel(fmt.Sprintf("Invalid weight value: %s", weightEntries[i].Text)), editWindow.Canvas()).Show()
@@ -127,31 +126,31 @@ func showEditWindow(myApp fyne.App, feedingData *[]Portion) {
 		}
 
 		if !hasError {
-			dataMutex.Lock()
-			*feedingData = newFeedingData
-			dataMutex.Unlock()
+			app.DataMutex.Lock()
+			app.FeedingData = newFeedingData
+			app.DataMutex.Unlock()
 
-			err := saveFeedingData("feeding_data.json", *feedingData)
+			err := saveFeedingData("feeding_data.json", app.FeedingData)
 			if err != nil {
 				widget.NewModalPopUp(widget.NewLabel("Error saving data"), editWindow.Canvas()).Show()
 			}
 
-			coeffsMutex.Lock()
-			globalCoeffs = trainModel(*feedingData)
-			coeffsMutex.Unlock()
+			app.CoeffsMutex.Lock()
+			app.Coeffs = trainModel(app.FeedingData)
+			app.CoeffsMutex.Unlock()
 
 			editWindow.Close()
-			editWindowOpen = false
+			app.EditWindowOpen = false
 		}
 	})
 
 	cancelButton := widget.NewButton("Cancel", func() {
-		if loadJSONWindowOpen {
-			currentLoadWindow.Close()
-			loadJSONWindowOpen = false
+		if app.LoadJSONWindowOpen {
+			app.CurrentLoadWindow.Close()
+			app.LoadJSONWindowOpen = false
 		}
 		editWindow.Close()
-		editWindowOpen = false
+		app.EditWindowOpen = false
 	})
 
 	content = container.NewVBox(
@@ -163,14 +162,15 @@ func showEditWindow(myApp fyne.App, feedingData *[]Portion) {
 	editWindow.Show()
 }
 
-func showLoadJSONWindow(myApp fyne.App, feedingData *[]Portion, refresh func()) {
-	if loadJSONWindowOpen {
+// showLoadJSONWindow displays a window for loading feeding data from JSON.
+func showLoadJSONWindow(myApp fyne.App, app *App, refresh func()) {
+	if app.LoadJSONWindowOpen {
 		return
 	}
-	loadJSONWindowOpen = true
-	currentLoadWindow = myApp.NewWindow("Load JSON Data")
-	currentLoadWindow.Resize(fyne.NewSize(600, 400))
-	loadWindow := currentLoadWindow
+	app.LoadJSONWindowOpen = true
+	app.CurrentLoadWindow = myApp.NewWindow("Load JSON Data")
+	app.CurrentLoadWindow.Resize(fyne.NewSize(600, 400))
+	loadWindow := app.CurrentLoadWindow
 
 	jsonEntry := widget.NewMultiLineEntry()
 	jsonEntry.SetPlaceHolder("Paste JSON data here...")
@@ -186,15 +186,15 @@ func showLoadJSONWindow(myApp fyne.App, feedingData *[]Portion, refresh func()) 
 			popup.Show()
 			return
 		}
-		*feedingData = newData
+		app.FeedingData = newData
 		refresh()
 		loadWindow.Close()
-		loadJSONWindowOpen = false
+		app.LoadJSONWindowOpen = false
 	})
 
 	cancelButton := widget.NewButton("Cancel", func() {
 		loadWindow.Close()
-		loadJSONWindowOpen = false
+		app.LoadJSONWindowOpen = false
 	})
 
 	loadWindow.SetContent(container.NewVBox(
@@ -205,7 +205,8 @@ func showLoadJSONWindow(myApp fyne.App, feedingData *[]Portion, refresh func()) 
 	loadWindow.Show()
 }
 
-func createMainWindow(myApp fyne.App, feedingData []Portion) fyne.Window {
+// createMainWindow creates and returns the main application window.
+func createMainWindow(myApp fyne.App, app *App) fyne.Window {
 	myWindow := myApp.NewWindow("Dog Food Calculator")
 	myWindow.Resize(fyne.NewSize(400, 200))
 
@@ -229,9 +230,9 @@ func createMainWindow(myApp fyne.App, feedingData []Portion) fyne.Window {
 		}
 
 		// Use a mutex to read the feeding data safely
-		dataMutex.RLock()
-		portionSize := calculatePortionSize(weight, feedingData)
-		dataMutex.RUnlock()
+		app.DataMutex.RLock()
+		portionSize := calculatePortionSize(weight, app.Coeffs)
+		app.DataMutex.RUnlock()
 
 		roundedPortionSize := math.Round(portionSize*100) / 100
 
@@ -241,7 +242,7 @@ func createMainWindow(myApp fyne.App, feedingData []Portion) fyne.Window {
 
 	// Create the edit button that opens a new window
 	editButton := widget.NewButton("Edit Data", func() {
-		showEditWindow(myApp, &feedingData)
+		showEditWindow(myApp, app)
 	})
 
 	// Set up the UI layout

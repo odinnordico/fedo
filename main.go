@@ -1,9 +1,12 @@
+// Package main implements a dog food calculator application using polynomial regression.
 package main
 
 import (
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
 )
+
+// main is the entry point of the application.
 
 func main() {
 	logger.Info("Starting Dog Food Calculator")
@@ -22,11 +25,16 @@ func main() {
 		feedingData = []Portion{}
 	}
 
-	// Train the polynomial regression model
-	coeffsMutex.Lock()
-	globalCoeffs = trainModel(feedingData)
-	coeffsMutex.Unlock()
+	// Create app state
+	appState := &App{
+		FeedingData: feedingData,
+	}
 
-	myWindow := createMainWindow(myApp, feedingData)
+	// Train the polynomial regression model
+	appState.CoeffsMutex.Lock()
+	appState.Coeffs = trainModel(feedingData)
+	appState.CoeffsMutex.Unlock()
+
+	myWindow := createMainWindow(myApp, appState)
 	myWindow.ShowAndRun()
 }

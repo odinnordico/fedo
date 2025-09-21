@@ -9,6 +9,8 @@ import (
 	"gonum.org/v1/gonum/mat"
 )
 
+// loadFeedingData loads feeding data from the specified JSON file.
+// If the file does not exist, it creates it with initial data.
 func loadFeedingData(filename string) ([]Portion, error) {
 	app := fyne.CurrentApp()
 	rootURI := app.Storage().RootURI()
@@ -102,6 +104,7 @@ func loadFeedingData(filename string) ([]Portion, error) {
 	return feedingData, nil
 }
 
+// saveFeedingData saves the feeding data to the specified JSON file.
 func saveFeedingData(filename string, feedingData []Portion) error {
 	data, err := json.MarshalIndent(feedingData, "", "  ")
 	if err != nil {
@@ -130,6 +133,7 @@ func saveFeedingData(filename string, feedingData []Portion) error {
 	return nil
 }
 
+// trainModel trains a 3rd-degree polynomial regression model on the feeding data and returns the coefficients.
 func trainModel(feedingData []Portion) []float64 {
 	if len(feedingData) == 0 {
 		logger.Warn("No feeding data to train model")
@@ -146,7 +150,7 @@ func trainModel(feedingData []Portion) []float64 {
 	// Fit polynomial of degree 3
 	n := len(x)
 	v := mat.NewDense(n, 4, nil)
-	for i := 0; i < n; i++ {
+	for i := range n {
 		v.Set(i, 0, 1)
 		v.Set(i, 1, x[i])
 		v.Set(i, 2, x[i]*x[i])
