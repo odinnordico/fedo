@@ -1,0 +1,50 @@
+[
+  {
+    "weight_kg": 1,
+    "daily_gr": 30
+  },
+  {
+    "weight_kg": 2.25,
+    "daily_gr": 50
+  },
+  {
+    "weight_kg": 4.5,
+    "daily_gr": 100
+  },
+  {
+    "weight_kg": 9,
+    "daily_gr": 150
+  },
+  {
+    "weight_kg": 13.5,
+    "daily_gr": 200
+  },
+  {
+    "weight_kg": 18,
+    "daily_gr": 233
+  },
+  {
+    "weight_kg": 27,
+    "daily_gr": 325
+  },
+  {
+    "weight_kg": 36,
+    "daily_gr": 375
+  },
+  {
+    "weight_kg": 45,
+    "daily_gr": 450
+  },
+  {
+    "weight_kg": 57,
+    "daily_gr": 525
+  },
+  {
+    "weight_kg": 68,
+    "daily_gr": 600
+  },
+  {
+    "weight_kg": 79,
+    "daily_gr": 666
+  }
+]
